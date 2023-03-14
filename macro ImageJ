@@ -10,8 +10,6 @@ save_directory = "C:";
 total_samples = 1;
 imgspersample = 1;
 
-// First, we need to know if the user has installed the Stack Focuser plugin.
-
 Dialog.create("Porosity analyser");
 	Dialog.addChoice("Are you ready to start?", newArray("Yes", "About the developer"));
 Dialog.show();

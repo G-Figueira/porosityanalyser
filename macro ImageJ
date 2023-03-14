@@ -1,0 +1,221 @@
+// Macro: Porosity analyser
+// Developer: Gustavo Figueira
+// Contact: gfigueira.eng@gmail.com
+// Function: Analyse the porosity of several images.
+
+// Defining the variables
+directory = "C:";
+name = "sample";
+save_directory = "C:";
+total_samples = 1;
+imgspersample = 1;
+
+// First, we need to know if the user has installed the Stack Focuser plugin.
+
+Dialog.create("Porosity analyser");
+	Dialog.addChoice("Are you ready to start?", newArray("Yes", "About the developer"));
+Dialog.show();
+confirmation = Dialog.getChoice();
+
+if (confirmation=="About the developer")
+	{
+	Dialog.create("About the developer");
+		Dialog.addMessage("Macro: Porosity analyser \nDeveloper: Gustavo Figueira \nLinkedIn: figueiragustavo \nORCID: 0000-0002-5771-0594 \nLinkedIn: figueiragustavo \nEmail: gfigueira.eng@gmail.com");
+	Dialog.show();
+	}
+else
+	{
+	// We need to give the instructions on how name the images in order to use the macro.
+
+	Dialog.create("Porosity analyser");
+		Dialog.addMessage("This macro works continuously, selecting and analysing the particles of several images one at time.\nBut you will need to name the images correctly first.\n \nYou have to name them at this format:\n     <name of the sample>##<middle term>**.<format>\nwhere ## is a number that denotes the sample\nand ** is a number that denotes a different image from the given sample.\n \nHere's an example:\nLet's suppose that the 4th image of the 33rd sample is named like this:\n     amostra 33 foto 4.tif\n \nTherefore,\n<name of the sample> = 'amostra'\n<middle term> = ' foto '\n<format> = 'tif'");		
+	Dialog.show();
+
+	Dialog.create("Porosity analyser");
+		Dialog.addString("Folder path (Please, include the slash at the end!):", directory);
+		Dialog.addString("Name of the sample:", "amostra");
+		Dialog.addString("Middle term:", " foto ");
+		Dialog.addNumber("Number of the last sample:", total_samples);
+		Dialog.addChoice("Format of the original images:", newArray("tif", "jpg", "gif", "bmp", "other"));
+		Dialog.addChoice("Save the edited images as:", newArray("tif", "jpg", "gif", "bmp"));
+		Dialog.addCheckbox("Save the edited images in a different folder", false);
+	Dialog.show();
+	directory = Dialog.getString();
+	name = Dialog.getString();
+	middlename = Dialog.getString();
+	total_samples = Dialog.getNumber();
+	image_type = Dialog.getChoice();
+	save_type = Dialog.getChoice();
+	other_directory = Dialog.getCheckbox();
+
+	if (image_type=="other")
+		{
+		Dialog.create("Image format")
+			Dialog.addString("Insert the original image format:", image_type);
+		Dialog.show();
+		image_type = Dialog.getString();
+		}
+
+	// Selecting the folder to save the images and results
+	if (other_directory==false)
+		{
+		save_directory = directory;
+		}
+	else
+		{
+		Dialog.create("Porosity analyser");
+			Dialog.addString("Saving folder path  (Include the slash at the end!):", directory);
+		Dialog.show();
+		save_directory = Dialog.getString();
+		}
+	
+	// Loading an array with the number of each sample
+	samplenumber = newArray(total_samples);
+	Dialog.create("Porosity analyser");
+		Dialog.addNumber("Did you start numbering the samples at 0 or 1?", 1);
+	Dialog.show();
+	origin = Dialog.getNumber();
+	for (i=0; i<samplenumber.length; i++)
+		{
+		samplenumber[i] = i+origin;
+		}
+		
+	// Loading an array with the quantity of  images of each sample
+	imgspersample = newArray(total_samples);
+	Dialog.create("Porosity analyser");
+		Dialog.addMessage("Now let's talk about how many images per sample do you have.");
+		Dialog.addCheckbox("Toggle the box if you have the same number of images for each sample.", true);
+	Dialog.show();
+	imgqtty = Dialog.getCheckbox();
+
+	if (imgqtty==false)
+		{
+		for (j=0; j<imgspersample.length; j++)
+			{
+			k = j + 1;
+			Dialog.create("Porosity analyser");
+				Dialog.addNumber("Number of images of the "+j+"-th sample :", imgspersample[j]);
+			Dialog.show();	
+			imgspersample[j] = Dialog.getNumber();
+			}	
+		}
+	else
+		{
+		Dialog.create("Porosity analyser");
+			Dialog.addNumber("Number of images per sample: ", 0);
+		Dialog.show();
+		qntty = Dialog.getNumber();
+		for (j=0; j<imgspersample.length; j++)
+			{
+			imgspersample[j] = qntty;
+			}
+		}
+
+	// Getting the color of the pores (number in the gray scale)
+	Dialog.create("Porosity analyser");
+		Dialog.addMessage("The pores must be the darkest objects in the image.");
+		Dialog.addNumber("Upper limit in the gray scale (from 0 to 255)", 190);
+		Dialog.addMessage("To find the upper limit of the pores in the gray scale:\nSelect an image, convert it to 8-bits and apply the Threshold function (Ctrl+Shift+T)\nto get the max number in the gray scale of the pores.")
+	Dialog.show();
+	porecolor = Dialog.getNumber();
+
+	// Exclude on the edges
+	Dialog.create("Porosity analyser");
+		Dialog.addChoice("Exclude the particles on the edges?", newArray("Yes", "No"));
+		Dialog.addMessage("If you select 'yes', the pores that are intersepted by the image boundaries will not be counted.\n \nIf you are interested in the morphology of the pores, select Yes. \n If you are interested in the porosity fraction, select No.")
+	Dialog.show();
+	excld = Dialog.getChoice();
+		
+// Setting the measurements and the results.
+
+// scalebar macro
+
+	run("Set Measurements...", "area shape feret's area_fraction display redirect=None decimal=3");
+
+	// FINALLY, let's analyse some pores!
+
+	// Beginning with an outter loop to select the sample
+	for (i=0; i<samplenumber.length; i++)
+		{
+		imgnumber = imgspersample[i];
+		j=0;
+		// and now going to select each image from that same sample
+		for (j=0; j<imgnumber; j++)
+			{
+			k = j + 1;
+			if (samplenumber[i]<=9)
+			{
+				if (k<10)
+				{
+					fullname = name+"0"+samplenumber[i]+middlename+"0"+k;
+					file = fullname+"."+image_type;
+					path = directory+file;
+				}
+				else
+				{
+					fullname = name+"0"+samplenumber[i]+middlename+k;
+					file = fullname+"."+image_type;
+					path = directory+file;
+				}
+			}
+			else
+			{
+				if (k<10)
+				{
+					fullname = name+samplenumber[i]+middlename+"0"+k;
+					file = fullname+"."+image_type;
+					path = directory+file;
+				}
+				else
+				{
+					fullname = name+samplenumber[i]+middlename+k;
+					file = fullname+"."+image_type;
+					path = directory+file;
+				}
+			}
+					// Checking if the file exists
+
+				// Opening, converting and thresholding the image
+			if (File.exists(path))
+				{
+				open(""+path+"");
+				selectWindow(""+file+"");
+				run("8-bit");
+				setAutoThreshold("Default");
+				//run("Threshold...");
+				//setThreshold(0, porecolor);
+				setOption("BlackBackground", false);
+				run("Convert to Mask");
+				
+				// Analysing the pores
+				if (excld=="Yes")
+					{
+					run("Analyze Particles...", "  show=Outlines display exclude summarize");
+					}
+				else
+					{
+					run("Analyze Particles...", "  show=Outlines display summarize");
+					}
+			
+				// Saving the image with the pores only
+				selectWindow(""+file+"");
+				save_path = save_directory+fullname+"_masks."+image_type;
+				saveAs(""+save_type+"", ""+save_path+"");
+				close();
+
+				// saving the outlines
+				selectWindow("Drawing of "+file+"");
+				save_path = save_directory+fullname+"_outlines."+image_type;
+				saveAs(""+save_type+"", ""+save_path+"");
+				close();
+				}
+			}
+		}
+	}
+selectWindow("Results");
+save_path = save_directory+name+"_individual particles results.csv";
+saveAs("Results", ""+save_path+"");
+selectWindow("Summary");
+save_path = save_directory+name+"summary results.csv";
+saveAs("Results", ""+save_path+"");
+run("Close All");
